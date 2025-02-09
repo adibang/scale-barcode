@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Daftar Produk</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #f0f2f5;
+      min-height: 100vh;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .back-btn {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .add-product-btn {
+      padding: 10px 20px;
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .product-form {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+
+    .pos-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #bdc3c7;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    .product-table {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+
+    #products-list {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #products-list th,
+    #products-list td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #products-list th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+
+    .action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0 4px;
+      color: white;
+    }
+
+    .edit-btn {
+      background: #3498db;
+    }
+
+    .delete-btn {
+      background: #e74c3c;
+    }
+
+    .error-message {
+      color: #e74c3c;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    #notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px 25px;
+      border-radius: 5px;
+      display: none;
+      color: white;
+      background-color: #2c3e50;
+      max-width: 90%;
+      text-align: center;
+      z-index: 1000;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="index.html" class="back-btn">← Kembali</a>
+      <!-- Tombol ini memunculkan/menghilangkan form produk -->
+      <button class="add-product-btn" onclick="toggleProductForm()">+ Tambah Produk</button>
+    </div>
+
+    <!-- Form input produk; tombol simpan di dalam form diberi id khusus agar tidak konflik -->
+    <div class="product-form" id="productForm">
+      <div class="form-group">
+        <label>Kode Produk (6 digit)</label>
+        <input type="text" id="product-code" class="pos-input" maxlength="6">
+        <div class="error-message" id="code-error"></div>
+      </div>
+      <div class="form-group">
+        <label>Nama Produk</label>
+        <input type="text" id="product-name" class="pos-input">
+        <div class="error-message" id="name-error"></div>
+      </div>
+      <div class="form-group">
+        <label>Harga per kg</label>
+        <input type="number" id="product-price" class="pos-input">
+        <div class="error-message" id="price-error"></div>
+      </div>
+      <button id="saveProductBtn" onclick="addProduct()" class="add-product-btn">Simpan Produk</button>
+    </div>
+
+    <!-- Tabel daftar produk -->
+    <div class="product-table">
+      <table id="products-list">
+        <thead>
+          <tr>
+            <th>Kode</th>
+            <th>Nama</th>
+            <th>Harga/kg</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="notification"></div>
+
+  <script>
+    // Mengambil produk dari localStorage
+    function getProducts() {
+      const products = localStorage.getItem('products');
+      return products ? JSON.parse(products) : [];
+    }
+
+    // Menyimpan produk ke localStorage
+    function saveProducts(products) {
+      localStorage.setItem('products', JSON.stringify(products));
+    }
+
+    // Validasi kode produk: harus 6 digit angka
+    function validateProductCode(code) {
+      const codeRegex = /^\d{6}$/;
+      return codeRegex.test(code);
+    }
+
+    // Cek apakah kode produk sudah ada
+    function isCodeDuplicate(code) {
+      const products = getProducts();
+      return products.some(product => product.code === code);
+    }
+
+    // Validasi nama produk: 3-50 karakter, huruf, angka, spasi dan tanda hubung
+    function validateProductName(name) {
+      const trimmedName = name.trim();
+      return trimmedName.length >= 3 &&
+             trimmedName.length <= 50 &&
+             /^[a-zA-Z0-9\s-]+$/.test(trimmedName);
+    }
+
+    // Validasi harga produk: integer antara 100 dan 1.000.000
+    function validatePrice(price) {
+      const numPrice = Number(price);
+      return !isNaN(numPrice) &&
+             numPrice >= 100 &&
+             numPrice <= 1000000 &&
+             Number.isInteger(numPrice);
+    }
+
+    // Menampilkan notifikasi sederhana
+    function showNotification(message, duration = 3000) {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.style.display = 'block';
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, duration);
+    }
+
+    // Fungsi toggle untuk memunculkan atau menyembunyikan form produk
+    function toggleProductForm() {
+      const form = document.getElementById('productForm');
+      const currentDisplay = window.getComputedStyle(form).display;
+      form.style.display = (currentDisplay === 'none') ? 'block' : 'none';
+      
+      // Jika form dibuka, reset form dan kembalikan mode "tambah produk"
+      if (form.style.display === 'block') {
+        clearProductForm();
+        document.getElementById('product-code').readOnly = false;
+        const saveBtn = document.getElementById('saveProductBtn');
+        saveBtn.textContent = 'Simpan Produk';
+        saveBtn.onclick = addProduct;
+      }
+    }
+
+    // Memperbarui tabel produk dengan data dari localStorage
+    function updateProductTable() {
+      const products = getProducts();
+      const tbody = document.querySelector("#products-list tbody");
+      tbody.innerHTML = "";
+      products.forEach(product => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${product.code}</td>
+          <td>${product.name}</td>
+          <td>${parseInt(product.price).toLocaleString()}</td>
+          <td>
+            <button class="action-btn edit-btn" onclick="editProduct('${product.code}')">Edit</button>
+            <button class="action-btn delete-btn" onclick="deleteProduct('${product.code}')">Hapus</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Menambahkan produk baru
+    function addProduct() {
+      const code = document.getElementById('product-code').value;
+      const name = document.getElementById('product-name').value;
+      const price = document.getElementById('product-price').value;
+
+      if (!validateProductCode(code)) {
+        showNotification("Kode produk harus 6 digit angka");
+        return;
+      }
+      if (isCodeDuplicate(code)) {
+        showNotification("Kode produk sudah digunakan");
+        return;
+      }
+      if (!validateProductName(name)) {
+        showNotification("Nama produk tidak valid");
+        return;
+      }
+      if (!validatePrice(price)) {
+        showNotification("Harga tidak valid");
+        return;
+      }
+
+      const products = getProducts();
+      products.push({ code, name, price });
+      saveProducts(products);
+      updateProductTable();
+      clearProductForm();
+      showNotification("Produk berhasil ditambahkan");
+      toggleProductForm();
+    }
+
+    // Mengosongkan form input
+    function clearProductForm() {
+      document.getElementById('product-code').value = '';
+      document.getElementById('product-name').value = '';
+      document.getElementById('product-price').value = '';
+    }
+
+    // Menghapus produk dengan konfirmasi
+    function deleteProduct(code) {
+      if (confirm('Yakin ingin menghapus produk ini?')) {
+        let products = getProducts();
+        products = products.filter(p => p.code !== code);
+        saveProducts(products);
+        updateProductTable();
+        showNotification("Produk berhasil dihapus");
+      }
+    }
+
+    // Mengisi form dengan data produk untuk diedit
+    function editProduct(code) {
+      const products = getProducts();
+      const product = products.find(p => p.code === code);
+      if (product) {
+        document.getElementById('product-code').value = product.code;
+        document.getElementById('product-code').readOnly = true;
+        document.getElementById('product-name').value = product.name;
+        document.getElementById('product-price').value = product.price;
+        document.getElementById('productForm').style.display = 'block';
+        const saveBtn = document.getElementById('saveProductBtn');
+        saveBtn.textContent = 'Update Produk';
+        saveBtn.onclick = () => saveEditedProduct(code);
+      }
+    }
+
+    // Menyimpan perubahan produk yang sudah diedit
+    function saveEditedProduct(originalCode) {
+      const name = document.getElementById('product-name').value;
+      const price = document.getElementById('product-price').value;
+
+      if (!validateProductName(name)) {
+        showNotification("Nama produk tidak valid");
+        return;
+      }
+      if (!validatePrice(price)) {
+        showNotification("Harga tidak valid");
+        return;
+      }
+
+      let products = getProducts();
+      products = products.map(p => {
+        if (p.code === originalCode) {
+          return { code: originalCode, name, price };
+        }
+        return p;
+      });
+      saveProducts(products);
+      updateProductTable();
+      clearProductForm();
+      document.getElementById('product-code').readOnly = false;
+      const saveBtn = document.getElementById('saveProductBtn');
+      saveBtn.textContent = 'Simpan Produk';
+      saveBtn.onclick = addProduct;
+      toggleProductForm();
+      showNotification("Produk berhasil diupdate");
+    }
+
+    // Inisialisasi saat halaman termuat
+    document.addEventListener('DOMContentLoaded', () => {
+      updateProductTable();
+    });
+  </script>
+</body>
+<footer style="text-align:center; margin-top:20px;">
+  <p>Versi Aplikasi: 1.0.0</p>
+</footer>
+
+</html>
