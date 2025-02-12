@@ -574,20 +574,43 @@
       });
       return result;
     }
+    
+    // Fungsi untuk mendapatkan data dari barcode yang sudah di-generate
+    function getBarcodeData() {
+      const barcodeElement = document.getElementById('current-barcode');
+      if (!barcodeElement || !barcodeElement.textContent) {
+        throw new Error("Belum ada barcode yang di-generate");
+      }
+      const barcodeData = barcodeElement.textContent;
+      
+      // Extract ID (digit 1-6) dan weight (digit 7-11) dari barcode EAN-13
+      return {
+        id: barcodeData.substring(1, 7),
+        weight: barcodeData.substring(7, 12)
+      };
+    }
 
     function formatPrintData() {
-      const formattedId = idValue.padStart(6, '0');
-      const formattedWeight = weightValue.padStart(5, '0');
-      const barcodeData = formatBarcodeData();
-      const ESC = 0x1B;
-      const GS = 0x1D;
-      const encoder = new TextEncoder();
-      const part1 = new Uint8Array([ESC, 0x40]); // Inisialisasi printer
-      const part2 = new Uint8Array([ESC, 0x61, 0x01]); // Center alignment
-      const textPart = encoder.encode(`ID: ${formattedId}\nBerat: ${formattedWeight}\nBarcode: ${barcodeData}\n`);
-      const barcodeCmd = new Uint8Array([GS, 0x6B, 0x49, barcodeData.length, ...barcodeData.split('').map(c => c.charCodeAt(0))]);
-      const lineFeeds = new Uint8Array([0x0A, 0x0A, 0x0A]);
-      return concatUint8Arrays([part1, part2, textPart, barcodeCmd, lineFeeds]);
+      try {
+        const { id, weight } = getBarcodeData();
+        const barcodeData = document.getElementById('current-barcode').textContent;
+        
+        const ESC = 0x1B;
+        const GS = 0x1D;
+        const encoder = new TextEncoder();
+        
+        const commands = [
+          new Uint8Array([ESC, 0x40]), // Initialize printer
+          new Uint8Array([ESC, 0x61, 0x01]), // Center alignment
+          encoder.encode(`ID: ${id}\nBerat: ${weight}\nBarcode: ${barcodeData}\n`),
+          new Uint8Array([GS, 0x6B, 0x49, barcodeData.length, ...barcodeData.split('').map(c => c.charCodeAt(0))]),
+          new Uint8Array([0x0A, 0x0A, 0x0A]) // Line feeds
+        ];
+        
+        return concatUint8Arrays(commands);
+      } catch (error) {
+        throw new Error("Generate barcode terlebih dahulu sebelum mencetak");
+      }
     }
 
     // Fungsi untuk memindai perangkat Bluetooth hanya sekali
@@ -666,24 +689,26 @@
     
     // Fungsi untuk mencetak setelah koneksi berhasil
     async function connectAndPrint() {
-        try {
-            if (!idValue || !weightValue) {
-                showNotification("Harap isi ID dan BERAT terlebih dahulu.");
-                return;
-            }
-    
-            if (!bluetoothDevice || !bluetoothDevice.gatt.connected) {
-                const connected = await connectToPrinter();
-                if (!connected) return;
-            }
-    
-            const printData = formatPrintData();
-            await bluetoothCharacteristic.writeValue(printData);
-            showNotification("Data berhasil dikirim ke printer");
-        } catch (error) {
-            console.error("Error printing:", error);
-            showNotification("Gagal mencetak: " + error.message);
+      try {
+        // Cek apakah barcode sudah di-generate
+        const barcodeElement = document.getElementById('current-barcode');
+        if (!barcodeElement || barcodeElement.textContent === '0000000000000') {
+          showNotification("Generate barcode terlebih dahulu sebelum mencetak");
+          return;
         }
+    
+        if (!bluetoothDevice || !bluetoothDevice.gatt.connected) {
+          const connected = await connectToPrinter();
+          if (!connected) return;
+        }
+    
+        const printData = formatPrintData();
+        await bluetoothCharacteristic.writeValue(printData);
+        showNotification("Data berhasil dikirim ke printer");
+      } catch (error) {
+        console.error("Error printing:", error);
+        showNotification("Gagal mencetak: " + error.message);
+      }
     }
 
 // Tambahkan event listener ke tombol scan Bluetooth
@@ -1150,38 +1175,44 @@
      kustomisasi format label
      *******************************/
     // Tambahkan fungsi untuk mengatur format label
+    // Update fungsi formatPrintDataWithCustomLayout untuk preview
     function formatPrintDataWithCustomLayout(options = {}) {
       const {
-        fontSize = 1, // 1 = normal, 2 = double height, 3 = double width
-        alignment = 1, // 0 = left, 1 = center, 2 = right
+        fontSize = 1,
+        alignment = 1,
         barcodeHeight = 50,
         barcodeWidth = 2,
         printQty = 1
       } = options;
     
-      const ESC = 0x1B;
-      const GS = 0x1D;
-      const encoder = new TextEncoder();
-      
-      // Array untuk menyimpan semua perintah printer
-      const commands = [
-        new Uint8Array([ESC, 0x40]), // Initialize printer
-        new Uint8Array([ESC, 0x21, fontSize]), // Set font size
-        new Uint8Array([ESC, 0x61, alignment]), // Set alignment
-        encoder.encode(`ID: ${idValue.padStart(6, '0')}\n`),
-        encoder.encode(`Berat: ${weightValue.padStart(5, '0')} g\n`),
-        // Atur ukuran barcode
-        new Uint8Array([GS, 0x68, barcodeHeight]), // Set barcode height
-        new Uint8Array([GS, 0x77, barcodeWidth]), // Set barcode width
-      ];
+      try {
+        const { id, weight } = getBarcodeData();
+        const barcodeData = document.getElementById('current-barcode').textContent;
+        
+        const ESC = 0x1B;
+        const GS = 0x1D;
+        const encoder = new TextEncoder();
+        
+        const commands = [
+          new Uint8Array([ESC, 0x40]), // Initialize printer
+          new Uint8Array([ESC, 0x21, fontSize]), // Set font size
+          new Uint8Array([ESC, 0x61, alignment]), // Set alignment
+          encoder.encode(`ID: ${id}\n`),
+          encoder.encode(`Berat: ${weight} g\n`),
+          new Uint8Array([GS, 0x68, barcodeHeight]), // Set barcode height
+          new Uint8Array([GS, 0x77, barcodeWidth]) // Set barcode width
+        ];
     
-      // Generate multiple copies if requested
-      for(let i = 0; i < printQty; i++) {
-        commands.push(new Uint8Array([GS, 0x6B, 0x49, 13, ...formatBarcodeData().split('').map(c => c.charCodeAt(0))]));
-        commands.push(new Uint8Array([0x0A, 0x0A])); // Line feeds between copies
+        // Generate multiple copies if requested
+        for(let i = 0; i < printQty; i++) {
+          commands.push(new Uint8Array([GS, 0x6B, 0x49, 13, ...barcodeData.split('').map(c => c.charCodeAt(0))]));
+          commands.push(new Uint8Array([0x0A, 0x0A])); // Line feeds between copies
+        }
+    
+        return concatUint8Arrays(commands);
+      } catch (error) {
+        throw new Error("Generate barcode terlebih dahulu sebelum mencetak");
       }
-    
-      return concatUint8Arrays(commands);
     }
     
     /********************************
