@@ -532,7 +532,7 @@
     function formatBarcodeData() {
       const formattedId = idValue.padStart(5, '0');
       const formattedWeight = weightValue.padStart(5, '0');
-      const base = "0" + formattedId + formattedWeight; // 12 digit
+      const base = "00" + formattedId + formattedWeight; // 12 digit
       const checkDigit = calculateEAN13CheckDigit(base);
       return base + checkDigit;
     }
