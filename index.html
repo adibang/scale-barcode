@@ -390,7 +390,7 @@
     <!-- Mode Kalkulator -->
     <div id="calculator-content">
       <div id="display">
-        <div>ID: <span id="current-id">000000</span></div>
+        <div>ID: <span id="current-id">00000</span></div>
         <div>BERAT: <span id="current-weight">00000</span></div>
         <div>BARCODE: <span id="current-barcode">0000000000000</span></div>
       </div>
@@ -488,7 +488,7 @@
           if (idValue.length <= 4) {
             idValue += num;
           }
-        } else if (idValue.length < 6) {
+        } else if (idValue.length < 5) {
           idValue += num;
         }
       } else if (currentInputMode === 'weight') {
@@ -530,7 +530,7 @@
 
     // Format barcode kalkulator: gabungkan "0" + ID (6 digit) + BERAT (5 digit), hitung check digit EAN-13
     function formatBarcodeData() {
-      const formattedId = idValue.padStart(6, '0');
+      const formattedId = idValue.padStart(5, '0');
       const formattedWeight = weightValue.padStart(5, '0');
       const base = "0" + formattedId + formattedWeight; // 12 digit
       const checkDigit = calculateEAN13CheckDigit(base);
@@ -556,7 +556,7 @@
     }
 
     function updateDisplay() {
-      document.getElementById('current-id').textContent = idValue.padStart(6, '0');
+      document.getElementById('current-id').textContent = idValue.padStart(5, '0');
       document.getElementById('current-weight').textContent = weightValue.padStart(5, '0');
       document.getElementById('current-barcode').textContent = formatBarcodeData();
     }
@@ -963,7 +963,7 @@
      * Fungsi Barcode Retail (POS)
      *******************************/
     function generateRetailBarcode(productCode, weight) {
-      const formattedProductCode = productCode.padStart(6, '0');
+      const formattedProductCode = productCode.padStart(5, '0');
       const formattedWeight = Math.round(weight).toString().padStart(5, '0');
       const base = "0" + formattedProductCode + formattedWeight; // 12 digit
       const checkDigit = calculateEAN13CheckDigit(base);
@@ -1274,7 +1274,7 @@
           <h3>Preview Label</h3>
           <div class="label-preview" style="background:white; padding:20px; margin:10px 0;">
             <div style="text-align:center; margin-bottom:10px;">
-              <div>ID: ${idValue.padStart(6, '0')}</div>
+              <div>ID: ${idValue.padStart(5, '0')}</div>
               <div>Berat: ${weightValue.padStart(5, '0')} g</div>
               <svg id="preview-barcode"></svg>
             </div>
