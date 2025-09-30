@@ -484,7 +484,7 @@
 
     function appendNumber(num) {
       if (currentInputMode === 'id') {
-        if (num === '00') {
+        if (num === '20') {
           if (idValue.length <= 4) {
             idValue += num;
           }
@@ -492,7 +492,7 @@
           idValue += num;
         }
       } else if (currentInputMode === 'weight') {
-        if (num === '00') {
+        if (num === '20') {
           if (weightValue.length <= 3) {
             weightValue += num;
           }
@@ -532,7 +532,7 @@
     function formatBarcodeData() {
       const formattedId = idValue.padStart(5, '0');
       const formattedWeight = weightValue.padStart(5, '0');
-      const base = "00" + formattedId + formattedWeight; // 12 digit
+      const base = "20" + formattedId + formattedWeight; // 12 digit
       const checkDigit = calculateEAN13CheckDigit(base);
       return base + checkDigit;
     }
