@@ -840,7 +840,7 @@
 
     // Validasi Produk
     function validateProductCode(code) {
-      const codeRegex = /^\d{6}$/;
+      const codeRegex = /^\d{5}$/;
       return codeRegex.test(code);
     }
 
@@ -965,7 +965,7 @@
     function generateRetailBarcode(productCode, weight) {
       const formattedProductCode = productCode.padStart(5, '0');
       const formattedWeight = Math.round(weight).toString().padStart(5, '0');
-      const base = "0" + formattedProductCode + formattedWeight; // 12 digit
+      const base = "20" + formattedProductCode + formattedWeight; // 12 digit
       const checkDigit = calculateEAN13CheckDigit(base);
       return base + checkDigit;
     }
